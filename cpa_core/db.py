@@ -32,10 +32,21 @@ class Database:
             CREATE TABLE IF NOT EXISTS documents (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 content TEXT NOT NULL,
-                collection TEXT,
-                filename TEXT
+                collection TEXT
             )
         """)
+
+        # Migration: Add missing columns if they don't exist
+        cursor.execute("PRAGMA table_info(documents)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if "collection" not in columns:
+            print("Migration: Adding 'collection' column to 'documents' table")
+            cursor.execute("ALTER TABLE documents ADD COLUMN collection TEXT")
+            
+        if "filename" not in columns:
+            print("Migration: Adding 'filename' column to 'documents' table")
+            cursor.execute("ALTER TABLE documents ADD COLUMN filename TEXT")
 
         # Collection metadata table (to persist empty folders)
         cursor.execute("""
