@@ -10,13 +10,35 @@ interface Action {
 
 const ActionInbox = () => {
   const [actions, setActions] = useState<Action[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
+    fetchActions();
+  }, []);
+
+  const fetchActions = () => {
     fetch(`${API_BASE_URL}/dashboard/inbox`)
       .then(res => res.json())
       .then(data => setActions(data))
       .catch(console.error);
-  }, []);
+  };
+
+  const handleAutoCategorize = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/categorize`, { method: 'POST' });
+      if (res.ok) {
+        fetchActions();
+        // Trigger a global refresh to update the transaction table
+        window.location.reload(); 
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (actions.length === 0) {
     return (
@@ -41,9 +63,20 @@ const ActionInbox = () => {
             <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{action.message}</h3>
             <p className="text-xs text-slate-500 mt-1">Requires manual review to improve tax accuracy.</p>
           </div>
-          <button className="bg-slate-50 text-slate-400 px-3 py-1 rounded-lg text-xs font-bold group-hover:bg-indigo-600 group-hover:text-white transition-all">
-            GO
-          </button>
+          <div className="flex flex-col space-y-2">
+            <button className="bg-slate-50 text-slate-400 px-3 py-1 rounded-lg text-xs font-bold group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                GO
+            </button>
+            {action.type === 'categorization' && (
+                <button 
+                    onClick={handleAutoCategorize}
+                    disabled={isProcessing}
+                    className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-50"
+                >
+                    {isProcessing ? '...' : 'Auto'}
+                </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

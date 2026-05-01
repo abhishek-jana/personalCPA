@@ -102,6 +102,33 @@ class CPAAssistant:
             return self._rag_chat(message, collection=collection)
         return self._simple_chat(message)
 
+    def categorize_transactions(self, transactions: List[dict]) -> List[dict]:
+        """Automatically assigns categories to a list of transactions."""
+        categorized = []
+        for t in transactions:
+            # Preservation: Don't overwrite existing categories
+            if t.get("category"):
+                categorized.append(t.copy())
+                continue
+
+            description = t.get("description", "Unknown")
+            prompt = f"Categorize this transaction description into a single short category name (e.g., Food, Rent, Salary, Travel, Shopping, Utilities, Medical, Insurance, Entertainment, Other):\n\nDescription: {description}\n\nCategory:"
+            
+            # Minimal implementation for the tracer bullet
+            response = self.provider.generate(prompt, stop=["\n"])
+            category = response["text"].strip()
+            
+            # Fallback for empty or confusing responses
+            if not category:
+                category = "Other"
+            
+            # Create a copy to avoid mutating original
+            new_t = t.copy()
+            new_t["category"] = category
+            categorized.append(new_t)
+            
+        return categorized
+
     def _simple_chat(self, message: str) -> ChatResult:
         prompt = f"### Instruction:\n{self.persona}\n\n### User Question:\n{message}\n\n### Answer:\n"
         return self._inference(prompt, stop=["###", "User Question:"])

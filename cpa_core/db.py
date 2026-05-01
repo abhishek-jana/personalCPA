@@ -66,6 +66,21 @@ class Database:
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
+    def get_uncategorized_transactions(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM transactions WHERE category IS NULL OR category = ''")
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+    def update_transaction(self, transaction_id: int, updates: dict):
+        cursor = self.conn.cursor()
+        keys = list(updates.keys())
+        values = list(updates.values())
+        set_clause = ", ".join([f"{k} = ?" for k in keys])
+        query = f"UPDATE transactions SET {set_clause} WHERE id = ?"
+        cursor.execute(query, (*values, transaction_id))
+        self.conn.commit()
+
     def save_document(self, content: str, embedding: list, collection: str = "default"):
         """Internal method used by KnowledgeBase."""
         cursor = self.conn.cursor()

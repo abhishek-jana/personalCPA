@@ -174,6 +174,21 @@ def create_transaction(transaction: Transaction):
 def get_transactions():
     return db.get_transactions()
 
+@app.post("/transactions/categorize")
+def categorize_all():
+    uncategorized = db.get_uncategorized_transactions()
+    if not uncategorized:
+        return {"status": "no transactions to categorize"}
+    
+    # Process through Assistant
+    categorized = assistant.categorize_transactions(uncategorized)
+    
+    # Save back to DB
+    for t in categorized:
+        db.update_transaction(t["id"], {"category": t["category"]})
+        
+    return {"status": "success", "count": len(categorized)}
+
 @app.post("/import", response_model=List[Transaction])
 async def import_transactions(file: UploadFile = File(...)):
     # Save temporary file
