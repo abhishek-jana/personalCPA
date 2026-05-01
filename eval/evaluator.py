@@ -5,7 +5,7 @@ from typing import List, Dict
 import os
 from cpa_core.db import Database
 from cpa_core.knowledge_base import KnowledgeBase
-from cpa_core.intelligence import CPAAssistant
+from cpa_core import intelligence
 
 def load_gold_standard(file_path: str) -> List[Dict]:
     with open(file_path, 'r') as f:
@@ -18,7 +18,10 @@ def evaluate_model(model_path: str, gold_standard: List[Dict], db_path: str, use
     db = Database(db_path)
     db.init_db()
     kb = KnowledgeBase(db)
-    assistant = CPAAssistant(model_path=model_path, kb=kb)
+    
+    # Use LlamaCppProvider for GGUF evaluation
+    provider = intelligence.LlamaCppProvider(model_path=model_path)
+    assistant = intelligence.CPAAssistant(provider=provider, kb=kb)
 
     results = []
     total_latency = 0
@@ -35,7 +38,7 @@ def evaluate_model(model_path: str, gold_standard: List[Dict], db_path: str, use
         
         # Simple accuracy check: keyword matching
         matched_keywords = [k for k in item['expected_answer_keywords'] if k.lower() in result.answer.lower()]
-        accuracy_score = len(matched_keywords) / len(item['expected_answer_keywords'])
+        accuracy_score = len(matched_keywords) / len(item['expected_answer_keywords']) if item['expected_answer_keywords'] else 1.0
         
         print(f"Answer: {result.answer}")
         print(f"Latency: {result.latency:.2f}s | Tokens: {result.tokens} | TPS: {result.tps:.2f}")
@@ -51,7 +54,7 @@ def evaluate_model(model_path: str, gold_standard: List[Dict], db_path: str, use
         })
 
     avg_tps = total_tokens / total_latency if total_latency > 0 else 0
-    avg_acc = sum(r['accuracy'] for r in results) / len(results)
+    avg_acc = sum(r['accuracy'] for r in results) / len(results) if results else 0
 
     print("\n" + "="*30)
     print(f"FINAL EVALUATION REPORT (RAG: {'ON' if use_rag else 'OFF'})")

@@ -23,7 +23,7 @@ class KnowledgeBase:
             self._embedder = TextEmbedding()
         return self._embedder
 
-    def add_text(self, text: str) -> List[int]:
+    def add_text(self, text: str, collection: str = "default") -> List[int]:
         """Chunks, embeds, and saves text to the vector store."""
         chunks = self._splitter.split_text(text)
         doc_ids = []
@@ -31,14 +31,18 @@ class KnowledgeBase:
             if not chunk.strip():
                 continue
             embedding = list(self.embedder.embed([chunk]))[0].tolist()
-            doc_id = self.db.save_document(chunk, embedding)
+            doc_id = self.db.save_document(chunk, embedding, collection=collection)
             doc_ids.append(doc_id)
         return doc_ids
 
-    def add_file(self, file_path: str) -> List[int]:
+    def add_file(self, file_path: str, collection: str = None) -> List[int]:
         """Extracts text from a file and adds it to the knowledge base."""
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
+
+        # If collection is not provided, use the filename as default collection
+        if collection is None:
+            collection = os.path.basename(file_path)
 
         ext = os.path.splitext(file_path)[1].lower()
         if ext == ".pdf":
@@ -51,12 +55,16 @@ class KnowledgeBase:
         else:
             raise ValueError(f"Unsupported file type: {ext}")
 
-        return self.add_text(text)
+        return self.add_text(text, collection=collection)
 
-    def query(self, text: str, limit: int = 3) -> List[Dict]:
+    def query(self, text: str, limit: int = 3, collection: str = None) -> List[Dict]:
         """Performs semantic search for relevant context."""
         query_embedding = list(self.embedder.embed([text]))[0].tolist()
-        return self.db.search_documents(query_embedding, limit=limit)
+        return self.db.search_documents(query_embedding, limit=limit, collection=collection)
+
+    def get_collections(self) -> List[str]:
+        """Returns a list of all unique collections."""
+        return self.db.get_collections()
 
     def _extract_pdf(self, file_path: str) -> str:
         reader = PdfReader(file_path)

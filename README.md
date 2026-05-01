@@ -3,16 +3,76 @@
 A completely local, privacy-first personal finance and tax management application.
 
 ## Overview
-This application is designed for individuals who want the power of AI-driven financial advice without compromising their data privacy. It runs entirely on your local machine, using a local LLM and a local vector database.
+This application is designed for individuals who want the power of AI-driven financial advice without compromising their data privacy. It runs entirely on your local machine, using a local LLM and a local vector database. No data ever leaves your machine.
 
-## System Architecture
+## Running Instructions (The "Painless" Way)
+
+This application is optimized for **Ollama**, which provides the best GPU performance and easiest setup for local LLMs.
+
+### 1. Install Ollama
+Download and install Ollama from [ollama.com](https://ollama.com).
+
+### 2. Download the Models
+We recommend two tiers of models based on your hardware (optimized for 64GB RAM / 8GB VRAM):
+```bash
+# Llama 3.1 8B (High Speed & Good Intelligence)
+ollama pull llama3.1:8b-instruct-q8_0
+
+# Mistral Nemo 12B (Highest Intelligence for complex tax queries)
+ollama pull mistral-nemo
+```
+
+### 3. Setup the Application
+Ensure you have `uv` installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
+```bash
+uv sync
+```
+
+### 4. Run the Backend
+Choose your intelligence tier using the `CPA_MODEL_TYPE` environment variable:
+
+**Painless Tier (Llama 3.1 8B - Fast & Accurate)**
+```bash
+export CPA_MODEL_TYPE=painless
+uv run uvicorn main:app
+```
+
+**Intelligence Tier (Mistral Nemo 12B - Expert Reasoning)**
+```bash
+export CPA_MODEL_TYPE=intelligence
+uv run uvicorn main:app
+```
+
+### 5. Start the Web UI
+In a new terminal:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open your browser to `http://localhost:5173`.
+
+### 6. Use the CLI
+You can also interact with the system via the command line:
+```bash
+# Check current configuration
+uv run python cli.py config
+
+# Start an interactive chat
+uv run python cli.py chat
+```
+
+---
+
+## Technical Architecture
+
 The project follows a **Deep Module** architecture, separating the "Brain" (LLM reasoning) from the "Memory" (Vector storage).
 
 ```mermaid
 graph TD
     subgraph UI [User Interfaces]
         CLI[Typer CLI]
-        Web[Tailwind Web UI]
+        Web[Vite + React]
     end
 
     subgraph App [Application Layer]
@@ -41,73 +101,17 @@ graph TD
     KB -->|Persists to| DB
 ```
 
-### Key Modules
-- **`CPAAssistant`**: Encapsulates persona, prompt engineering, and LLM inference.
-- **`KnowledgeBase`**: Manages the RAG lifecycle: text extraction, chunking, and semantic embedding.
-- **`Database`**: Handles SQLite-VSS persistence for both transactions and vector memory.
-- **`Ingest`**: Robust parsing and normalization of messy financial data.
-
-## Features
-- **Local Intelligence**: Uses `llama-cpp-python` to run GGUF models (like Phi-3) on your hardware.
-- **Semantic Memory**: Grounded tax advice using RAG (Retrieval-Augmented Generation).
-- **Multi-Spec**: Support for both CPU (laptop) and GPU (workstation) installations.
-- **Evaluation Framework**: Built-in benchmarking suite to compare model speed and accuracy.
-
-## Tech Stack
+### Tech Stack
 - **Backend**: Python 3.11+, FastAPI, `uv`
-- **Intelligence**: `llama-cpp-python`, `fastembed` (BGE-small)
+- **Intelligence**: **Ollama** (Llama 3.1, Mistral Nemo), `fastembed` (BGE-small)
 - **Database**: SQLite with `sqlite-vss` extension
-- **Frontend**: Tailwind CSS + Vanilla JS
-
-## Getting Started
-
-### Prerequisites
-- `uv` (Install with `curl -LsSf https://astral.sh/uv/install.sh | sh`)
-- For GPU support: CUDA Toolkit.
-
-### Setup
-1. Clone the repository.
-2. Install LLM dependencies:
-   ```bash
-   # For CPU (Laptop)
-   ./install_llm.sh
-   # For GPU (CUDA)
-   ./install_llm.sh --gpu
-   ```
-3. Sync remaining dependencies:
-   ```bash
-   uv sync
-   ```
-
-### Running the Application
-1. **Start the Backend**:
-   ```bash
-   # Default (CPU)
-   uv run python -m uvicorn main:app --reload
-   
-   # With GPU acceleration (e.g., 32 layers)
-   CPA_GPU_LAYERS=32 uv run python -m uvicorn main:app --reload
-   ```
-
-2. **Start the Web UI**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Open your browser to `http://localhost:5173`.
-
-3. **Use the CLI**:
-   ```bash
-   # Chat with your assistant
-   uv run python cli.py chat
-   # Benchmark a model
-   uv run python cli.py eval models/your_model.gguf --rag
-   ```
+- **Frontend**: Vite, React, Tailwind CSS
 
 ## Roadmap
-- [x] Slice 1-4: Core infrastructure, LLM, and Chat.
-- [x] Slice 5: Vector Memory & Embedding.
-- [x] Slice 6: RAG-based Tax Guru.
-- [x] Slice 7: Bank Statement Ingestion.
+- [x] Core infrastructure & Multi-Model Provider support.
+- [x] Vector Memory & Embedding (BGE-Small).
+- [x] RAG-based Tax Guru.
+- [x] Bank Statement Ingestion.
 - [x] **Architectural Refactor**: Deep modules and Dependency Injection.
+- [ ] Multi-user / Session support.
+- [ ] Automated tax form pre-filling.

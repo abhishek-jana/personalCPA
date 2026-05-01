@@ -1,8 +1,9 @@
 import ActionInbox from './ActionInbox';
 import TransactionTable from './TransactionTable';
+import KnowledgeBase from './KnowledgeBase';
 
 const Dashboard = () => (
-  <div className="space-y-8 animate-in fade-in duration-500">
+  <div className="space-y-12 animate-in fade-in duration-500 pb-20">
     <section>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-black tracking-tight text-slate-800">Guardian Inbox</h2>
@@ -12,6 +13,11 @@ const Dashboard = () => (
       </div>
       <ActionInbox />
     </section>
+
+    <section>
+      <KnowledgeBase />
+    </section>
+
     <section>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-black tracking-tight text-slate-800">Recent Transactions</h2>
@@ -23,5 +29,10 @@ const Dashboard = () => (
     </section>
   </div>
 );
+
+export default Dashboard;
+
+  );
+};
 
 export default Dashboard;

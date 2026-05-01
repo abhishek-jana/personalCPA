@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Search } from 'lucide-react';
+import { API_BASE_URL } from '../lib/api';
+
+interface Transaction {
+  id: number;
+  date: string;
+  description: string;
+  category: string | null;
+  amount: number;
+}
 
 const TransactionTable = () => {
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/transactions')
+    fetch(`${API_BASE_URL}/transactions`)
       .then(res => res.json())
       .then(data => setTransactions(data))
       .catch(console.error);

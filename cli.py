@@ -186,5 +186,40 @@ def search(query: str, limit: int = 3, url: str = DEFAULT_URL):
     except httpx.RequestError as exc:
         console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
 
+@app.command()
+def config(url: str = DEFAULT_URL):
+    """Show the current LLM backend and model configuration."""
+    try:
+        response = httpx.get(f"{url}/config")
+        if response.status_code == 200:
+            data = response.json()
+            table = Table(title="CPA Assistant Configuration")
+            table.add_column("Key", style="cyan")
+            table.add_column("Value", style="green")
+            
+            table.add_row("Backend", data["backend"])
+            table.add_row("Model Name", data["model"])
+            table.add_row("Model Tier", data["model_type"])
+            table.add_row("Available Tiers", ", ".join(data["available_types"]))
+            
+            console.print(table)
+        else:
+            console.print(f"[red]Error:[/red] {response.status_code}")
+    except httpx.RequestError as exc:
+        console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
+
+@app.command()
+def switch(model_tier: str, url: str = DEFAULT_URL):
+    """Switch the AI model tier (painless, intelligence, fast) at runtime."""
+    try:
+        response = httpx.post(f"{url}/config/model", json={"model_type": model_tier})
+        if response.status_code == 200:
+            data = response.json()
+            console.print(f"[green]Successfully switched to {data['new_type']} tier ({data['new_model']})![/green]")
+        else:
+            console.print(f"[red]Error:[/red] {response.status_code} - {response.text}")
+    except httpx.RequestError as exc:
+        console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
+
 if __name__ == "__main__":
     app()

@@ -1,11 +1,18 @@
-import { AlertCircle, Tag, FileText, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Tag, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../lib/api';
+
+interface Action {
+  type: 'categorization' | 'other';
+  message: string;
+  count: number;
+}
 
 const ActionInbox = () => {
-  const [actions, setActions] = useState([]);
+  const [actions, setActions] = useState<Action[]>([]);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/dashboard/inbox')
+    fetch(`${API_BASE_URL}/dashboard/inbox`)
       .then(res => res.json())
       .then(data => setActions(data))
       .catch(console.error);

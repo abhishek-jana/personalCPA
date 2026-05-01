@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Loader2, Sparkles, User } from 'lucide-react';
+import { Send, Bot, Loader2, Sparkles } from 'lucide-react';
+import { API_BASE_URL } from '../lib/api';
 
 const Assistant = () => {
   const [messages, setMessages] = useState([
@@ -23,7 +24,7 @@ const Assistant = () => {
     setIsThinking(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/chat', {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: input, use_rag: true })

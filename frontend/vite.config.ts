@@ -8,4 +8,17 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/chat': 'http://localhost:8000',
+      '/dashboard': 'http://localhost:8000',
+      '/transactions': 'http://localhost:8000',
+      '/health': 'http://localhost:8000',
+      '/config': 'http://localhost:8000',
+      '/import': 'http://localhost:8000',
+      '/documents': 'http://localhost:8000',
+      '/search': 'http://localhost:8000',
+      '/status': 'http://localhost:8000',
+    }
+  }
 })

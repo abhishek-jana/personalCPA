@@ -22,10 +22,10 @@ done
 
 if [ "$GPU_MODE" = true ]; then
     echo "Installing llama-cpp-python with CUDA (GPU) support into $VENV_PATH..."
-    # Set CMAKE_ARGS for CUDA support
-    # GGML_CUDA=on is for modern llama-cpp-python (0.2.27+)
-    # FORCE_CMAKE=1 ensures it doesn't use a cached CPU build
-    export CMAKE_ARGS="-DGGML_CUDA=on"
+    # Use GCC 10 for CUDA compatibility on Ubuntu 22.04 with CUDA 11.5
+    export CC=gcc-10
+    export CXX=g++-10
+    export CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_HOST_COMPILER=gcc-10"
     export FORCE_CMAKE=1
     
     # Target the local .venv explicitly to avoid cross-contamination
