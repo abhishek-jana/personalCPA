@@ -22,32 +22,42 @@ class KnowledgeBase:
             # Default model: BAAI/bge-small-en-v1.5
             self._embedder = TextEmbedding()
         return self._embedder
+def add_text(self, text: str, collection: str = "default", filename: str = None) -> List[int]:
+    """Chunks, embeds, and saves text to the vector store."""
+    chunks = self._splitter.split_text(text)
+    doc_ids = []
+    for chunk in chunks:
+        if not chunk.strip():
+            continue
+        embedding = list(self.embedder.embed([chunk]))[0].tolist()
+        doc_id = self.db.save_document(chunk, embedding, collection=collection, filename=filename)
+        doc_ids.append(doc_id)
+    return doc_ids
 
-    def add_text(self, text: str, collection: str = "default") -> List[int]:
-        """Chunks, embeds, and saves text to the vector store."""
-        chunks = self._splitter.split_text(text)
-        doc_ids = []
-        for chunk in chunks:
-            if not chunk.strip():
-                continue
-            embedding = list(self.embedder.embed([chunk]))[0].tolist()
-            doc_id = self.db.save_document(chunk, embedding, collection=collection)
-            doc_ids.append(doc_id)
-        return doc_ids
+def add_file(self, file_path: str, collection: str = None) -> List[int]:
+    """Extracts text from a file and adds it to the knowledge base."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
 
-    def add_file(self, file_path: str, collection: str = None) -> List[int]:
-        """Extracts text from a file and adds it to the knowledge base."""
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
+    filename = os.path.basename(file_path)
+    # If collection is not provided, use the filename as default collection
+    if collection is None:
+        collection = filename
 
-        # If collection is not provided, use the filename as default collection
-        if collection is None:
-            collection = os.path.basename(file_path)
+    ext = os.path.splitext(file_path)[1].lower()
+...
+def get_collections(self) -> List[str]:
+    """Returns a list of all unique collections."""
+    return self.db.get_collections()
 
-        ext = os.path.splitext(file_path)[1].lower()
-        if ext == ".pdf":
-            text = self._extract_pdf(file_path)
-        elif ext in [".html", ".htm"]:
+def add_collection(self, name: str):
+    """Creates a new empty collection."""
+    self.db.add_collection(name)
+
+def get_documents_in_collection(self, collection_name: str) -> List[Dict]:
+    """Returns a list of documents (filenames) in a collection."""
+    return self.db.get_collection_documents(collection_name)
+
             text = self._extract_html(file_path)
         elif ext == ".txt":
             with open(file_path, "r", encoding="utf-8") as f:

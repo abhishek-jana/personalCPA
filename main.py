@@ -241,6 +241,18 @@ class SearchRequest(BaseModel):
 def list_collections():
     return kb.get_collections()
 
+class CreateCollectionRequest(BaseModel):
+    name: str
+
+@app.post("/collections")
+def create_collection(request: CreateCollectionRequest):
+    kb.add_collection(request.name)
+    return {"status": "created", "name": request.name}
+
+@app.get("/collections/{collection_name}/documents")
+def list_collection_documents(collection_name: str):
+    return kb.get_documents_in_collection(collection_name)
+
 @app.post("/documents")
 def add_document(request: DocumentRequest):
     doc_ids = kb.add_text(request.content, collection=request.collection)

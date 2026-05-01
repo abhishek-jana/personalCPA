@@ -32,7 +32,16 @@ class Database:
             CREATE TABLE IF NOT EXISTS documents (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 content TEXT NOT NULL,
-                collection TEXT
+                collection TEXT,
+                filename TEXT
+            )
+        """)
+
+        # Collection metadata table (to persist empty folders)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS collections (
+                name TEXT PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         
@@ -81,12 +90,21 @@ class Database:
         cursor.execute(query, (*values, transaction_id))
         self.conn.commit()
 
-    def save_document(self, content: str, embedding: list, collection: str = "default"):
+    def add_collection(self, name: str):
+        cursor = self.conn.cursor()
+        cursor.execute("INSERT OR IGNORE INTO collections (name) VALUES (?)", (name,))
+        self.conn.commit()
+
+    def save_document(self, content: str, embedding: list, collection: str = "default", filename: str = None):
         """Internal method used by KnowledgeBase."""
         cursor = self.conn.cursor()
+        
+        # Ensure collection exists
+        cursor.execute("INSERT OR IGNORE INTO collections (name) VALUES (?)", (collection,))
+        
         cursor.execute(
-            "INSERT INTO documents (content, collection) VALUES (?, ?)", 
-            (content, collection)
+            "INSERT INTO documents (content, collection, filename) VALUES (?, ?, ?)", 
+            (content, collection, filename)
         )
         doc_id = cursor.lastrowid
         cursor.execute(
@@ -132,8 +150,19 @@ class Database:
 
     def get_collections(self):
         cursor = self.conn.cursor()
-        cursor.execute("SELECT DISTINCT collection FROM documents WHERE collection IS NOT NULL")
+        cursor.execute("SELECT name FROM collections ORDER BY created_at DESC")
         return [row[0] for row in cursor.fetchall()]
+
+    def get_collection_documents(self, collection_name: str):
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT filename, count(*) as chunks 
+            FROM documents 
+            WHERE collection = ? 
+            GROUP BY filename
+        """, (collection_name,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
     def close(self):
         self.conn.close()

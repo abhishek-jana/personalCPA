@@ -1,18 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Folder, FileText, Upload, Plus, Search } from 'lucide-react';
+import { Folder, FileText, Upload, Plus, Search, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../lib/api';
+
+interface CollectionDocument {
+  filename: string;
+  chunks: number;
+}
 
 const KnowledgeBase = () => {
-  const [collections, setCollections] = useState([]);
-  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [collections, setCollections] = useState<string[]>([]);
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<CollectionDocument[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
 
   useEffect(() => {
     fetchCollections();
   }, []);
 
+  useEffect(() => {
+    if (selectedCollection) {
+      fetchDocuments(selectedCollection);
+    }
+  }, [selectedCollection]);
+
   const fetchCollections = () => {
-    fetch('http://127.0.0.1:8000/collections')
+    fetch(`${API_BASE_URL}/collections`)
       .then(res => res.json())
       .then(data => {
         setCollections(data);
@@ -23,22 +37,31 @@ const KnowledgeBase = () => {
       .catch(console.error);
   };
 
+  const fetchDocuments = (collectionName: string) => {
+    setIsLoadingDocs(true);
+    fetch(`${API_BASE_URL}/collections/${encodeURIComponent(collectionName)}/documents`)
+      .then(res => res.json())
+      .then(data => setDocuments(data))
+      .catch(console.error)
+      .finally(() => setIsLoadingDocs(false));
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0]) return;
+    if (!e.target.files || !e.target.files[0] || !selectedCollection) return;
     
     const file = e.target.files[0];
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('collection', selectedCollection || 'General');
+    formData.append('collection', selectedCollection);
 
     setIsUploading(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/documents/upload', {
+      const res = await fetch(`${API_BASE_URL}/documents/upload`, {
         method: 'POST',
         body: formData,
       });
       if (res.ok) {
-        fetchCollections();
+        fetchDocuments(selectedCollection);
       }
     } catch (err) {
       console.error(err);
@@ -47,13 +70,24 @@ const KnowledgeBase = () => {
     }
   };
 
-  const handleCreateCollection = () => {
-    if (!newCollectionName.strip()) return;
-    if (!collections.includes(newCollectionName)) {
-      setCollections([...collections, newCollectionName]);
-      setSelectedCollection(newCollectionName);
+  const handleCreateCollection = async () => {
+    const name = newCollectionName.trim();
+    if (!name) return;
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/collections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+            setNewCollectionName("");
+            fetchCollections();
+            setSelectedCollection(name);
+        }
+    } catch (err) {
+        console.error(err);
     }
-    setNewCollectionName("");
   };
 
   return (
@@ -66,13 +100,14 @@ const KnowledgeBase = () => {
                 placeholder="New folder name..."
                 value={newCollectionName}
                 onChange={(e) => setNewCollectionName(e.target.value)}
-                className="text-xs px-3 py-1 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateCollection()}
+                className="text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48"
             />
             <button 
                 onClick={handleCreateCollection}
-                className="bg-indigo-600 text-white p-1.5 rounded-lg hover:bg-indigo-700 transition-colors"
+                className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
             >
-                <Plus size={16} />
+                <Plus size={18} />
             </button>
         </div>
       </div>
@@ -95,42 +130,77 @@ const KnowledgeBase = () => {
             </button>
           ))}
           {collections.length === 0 && (
-            <p className="text-xs text-slate-400 italic p-4">No folders yet.</p>
+            <div className="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center">
+                <p className="text-xs text-slate-400 italic">No folders yet.</p>
+            </div>
           )}
         </div>
 
         {/* Content Area */}
-        <div className="col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-8 min-h-[400px] flex flex-col">
+        <div className="col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm min-h-[400px] flex flex-col overflow-hidden">
           {selectedCollection ? (
             <>
-              <div className="flex items-center justify-between mb-8">
+              <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-black text-slate-900">{selectedCollection}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Ground the Assistant in this context.</p>
+                  <p className="text-xs text-slate-500 mt-1">Grounding context for your CPA Assistant.</p>
                 </div>
-                <label className="cursor-pointer bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all flex items-center space-x-2">
+                <label className="cursor-pointer bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all flex items-center space-x-2 shadow-sm">
                   <Upload size={14} />
-                  <span>{isUploading ? 'Uploading...' : 'Upload Document'}</span>
+                  <span>{isUploading ? 'Ingesting...' : 'Upload to Folder'}</span>
                   <input type="file" className="hidden" onChange={handleUpload} disabled={isUploading} />
                 </label>
               </div>
 
-              <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center">
-                  <FileText size={32} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800">Folder context ready</h4>
-                  <p className="text-sm text-slate-500 max-w-xs mx-auto">
-                    The Assistant will automatically use documents in this folder when you ask related questions.
-                  </p>
-                </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {isLoadingDocs ? (
+                  <div className="h-full flex items-center justify-center text-slate-400">
+                    <Loader2 className="animate-spin mr-2" size={20} />
+                    <span className="text-sm font-medium">Loading documents...</span>
+                  </div>
+                ) : documents.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {documents.map((doc, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all group">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center group-hover:bg-white group-hover:text-indigo-500 transition-colors">
+                            <FileText size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{doc.filename}</p>
+                            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{doc.chunks} Semantic Chunks</p>
+                          </div>
+                        </div>
+                        <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-bold">
+                            READY
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-slate-50 text-slate-200 rounded-3xl flex items-center justify-center">
+                      <FileText size={40} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-400">This folder is empty</h4>
+                      <p className="text-xs text-slate-400 max-w-[200px] mx-auto mt-1">
+                        Upload documents to give the Assistant context for this category.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <Search size={48} className="text-slate-100 mb-4" />
-                <p className="text-slate-400 font-medium">Select a folder to view documents</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                    <Search size={40} className="text-slate-200" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Select or Create a Folder</h3>
+                <p className="text-sm text-slate-500 max-w-xs mx-auto mt-2">
+                    Organize your documents into collections to help the Assistant find exactly what it needs.
+                </p>
             </div>
           )}
         </div>
