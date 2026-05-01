@@ -1,4 +1,4 @@
-import { AlertCircle, Tag, CheckCircle2, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
+import { AlertCircle, Tag, CheckCircle2, ShieldAlert, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../lib/api';
 
