@@ -90,14 +90,24 @@ class CPAAssistant:
         self.provider = provider
         self.kb = kb
         
-        self.persona = "You are a helpful and accurate CPA Assistant specializing in personal finance and tax advice."
+        self.persona = (
+            "You are a helpful and accurate CPA Assistant specializing in personal finance and tax advice. "
+            "You have access to a Knowledge Base organized into 'Folders' (Collections). "
+        )
         self.instructions = (
             "Use the provided context to answer the user's question. "
+            "If the user asks about their folders or documents, you should acknowledge that you can see and search them. "
             "If the answer is not in the context, use your general knowledge but mention "
             "it is not in the provided documents."
         )
 
     def ask(self, message: str, use_rag: bool = True, collection: Optional[str] = None) -> ChatResult:
+        # If the user asks specifically about folders, let's inject that info
+        if "folder" in message.lower() and self.kb:
+            collections = self.kb.get_collections()
+            col_list = ", ".join(collections) if collections else "None yet"
+            message = f"{message} (System Note: The available folders in the Knowledge Base are: {col_list})"
+
         if use_rag and self.kb:
             return self._rag_chat(message, collection=collection)
         return self._simple_chat(message)
