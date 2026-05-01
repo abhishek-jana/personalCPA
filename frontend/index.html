@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Local CPA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-800">Personal Local CPA</h1>
+            <div id="status-badge" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-300">
+                Status: Checking...
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Sidebar / Controls -->
+            <div class="md:col-span-1 space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold mb-4">Quick Actions</h2>
+                    <button id="refresh-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition mb-2">
+                        Refresh Transactions
+                    </button>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Import CSV</label>
+                        <input type="file" id="csv-file" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="md:col-span-3">
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Transactions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+
+        async function checkStatus() {
+            const badge = document.getElementById('status-badge');
+            try {
+                const response = await fetch(`${API_URL}/status`);
+                if (response.ok) {
+                    badge.textContent = 'Status: Online';
+                    badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+                } else {
+                    throw new Error();
+                }
+            } catch (e) {
+                badge.textContent = 'Status: Offline';
+                badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+            }
+        }
+
+        async function loadTransactions() {
+            const body = document.getElementById('transactions-body');
+            try {
+                const response = await fetch(`${API_URL}/transactions`);
+                const data = await response.json();
+                
+                body.innerHTML = '';
+                data.forEach(t => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${t.description}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.category || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold ${t.amount < 0 ? 'text-red-600' : 'text-green-600'}">
+                            $${Math.abs(t.amount).toFixed(2)}
+                        </td>
+                    `;
+                    body.appendChild(row);
+                });
+            } catch (e) {
+                console.error('Failed to load transactions', e);
+            }
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', loadTransactions);
+
+        document.getElementById('csv-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_URL}/import`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    alert('Import successful!');
+                    loadTransactions();
+                } else {
+                    alert('Import failed');
+                }
+            } catch (e) {
+                alert('An error occurred during import');
+            }
+        });
+
+        // Initial load
+        checkStatus();
+        loadTransactions();
+    </script>
+</body>
+</html>
