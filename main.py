@@ -28,7 +28,8 @@ kb = KnowledgeBase(db)
 
 # Initialize Assistant with Dependency Injection
 MODEL_PATH = os.getenv("CPA_MODEL_PATH", "models/Phi-3-mini-4k-instruct-q4.gguf")
-assistant = CPAAssistant(model_path=MODEL_PATH, kb=kb)
+GPU_LAYERS = int(os.getenv("CPA_GPU_LAYERS", "0"))
+assistant = CPAAssistant(model_path=MODEL_PATH, kb=kb, n_gpu_layers=GPU_LAYERS)
 
 class Transaction(BaseModel):
     id: Optional[int] = None

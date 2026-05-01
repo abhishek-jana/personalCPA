@@ -17,9 +17,10 @@ class Searchable(Protocol):
         ...
 
 class CPAAssistant:
-    def __init__(self, model_path: str, kb: Optional[Searchable] = None):
+    def __init__(self, model_path: str, kb: Optional[Searchable] = None, n_gpu_layers: int = 0):
         self.model_path = model_path
         self.kb = kb
+        self.n_gpu_layers = n_gpu_layers
         self._llm: Optional[Llama] = None
         
         # Internalized Persona & Prompts
@@ -40,6 +41,7 @@ class CPAAssistant:
                 model_path=self.model_path,
                 n_ctx=2048,
                 n_threads=os.cpu_count(),
+                n_gpu_layers=self.n_gpu_layers,
                 verbose=False
             )
         return self._llm

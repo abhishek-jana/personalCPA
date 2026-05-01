@@ -82,9 +82,22 @@ graph TD
 ### Running the Application
 1. **Start the Backend**:
    ```bash
+   # Default (CPU)
    uv run python -m uvicorn main:app --reload
+   
+   # With GPU acceleration (e.g., 32 layers)
+   CPA_GPU_LAYERS=32 uv run python -m uvicorn main:app --reload
    ```
-2. **Use the CLI**:
+
+2. **Start the Web UI**:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   Open your browser to `http://localhost:5173`.
+
+3. **Use the CLI**:
    ```bash
    # Chat with your assistant
    uv run python cli.py chat
