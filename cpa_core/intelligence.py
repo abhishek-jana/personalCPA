@@ -201,3 +201,53 @@ class CPAAssistant:
             tokens=tokens,
             tps=tps
         )
+
+class CPAAuditor:
+    def __init__(self, provider: LLMProvider, kb: Any):
+        self.provider = provider
+        self.kb = kb
+
+    def audit_collection(self, collection_name: str) -> List[Dict]:
+        """Verifies if documents in a collection belong there."""
+        documents = self.kb.get_documents_in_collection(collection_name)
+        anomalies = []
+
+        for doc in documents:
+            filename = doc["filename"]
+            # Get a sample of the content (first chunk)
+            results = self.kb.query(f"What is this document about? {filename}", limit=1, collection=collection_name)
+            if not results:
+                continue
+            
+            content_snippet = results[0]["content"][:1000]
+            
+            prompt = f"""### Instruction:
+You are a highly detailed CPA Audit Assistant. Your task is to verify if a document belongs in a specific collection.
+
+### Collection Name: 
+{collection_name}
+
+### Document Filename:
+{filename}
+
+### Content Snippet:
+{content_snippet}
+
+### Question:
+Does this document belong in the '{collection_name}' collection? If it seems out of place (e.g., a personal grocery receipt in a 'Tax Knowledge' folder), identify it as an ANOMALY.
+
+Respond with ONLY 'VALID' or 'ANOMALY' followed by a one-sentence reason.
+
+### Answer:
+"""
+            response = self.provider.generate(prompt, stop=["###"])
+            text = response["text"].strip()
+            
+            if "ANOMALY" in text.upper():
+                anomalies.append({
+                    "filename": filename,
+                    "collection": collection_name,
+                    "reason": text.replace("ANOMALY", "").strip(": ").strip()
+                })
+
+        return anomalies

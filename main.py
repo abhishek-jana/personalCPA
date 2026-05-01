@@ -9,8 +9,10 @@ from cpa_core.ingest import parse_csv
 from cpa_core import intelligence
 from cpa_core.knowledge_base import KnowledgeBase
 from cpa_core.health import SystemHealth
+from cpa_core.watcher import start_watcher
 import os
 import shutil
+import asyncio
 
 app = FastAPI()
 
@@ -28,6 +30,10 @@ db.init_db()
 
 # Initialize KnowledgeBase
 kb = KnowledgeBase(db)
+
+# Start Filesystem Watcher
+kb.sync()
+watcher = start_watcher(kb)
 
 # Model Definitions based on user hardware (8GB VRAM / 64GB RAM)
 MODELS = {
@@ -63,6 +69,7 @@ def create_provider(backend: str, model_key: str):
 # Global Assistant Instance
 current_provider = create_provider(LLM_BACKEND, SELECTED_MODEL_KEY)
 assistant = intelligence.CPAAssistant(provider=current_provider, kb=kb)
+auditor = intelligence.CPAAuditor(provider=current_provider, kb=kb)
 
 @app.get("/config")
 def get_config():
@@ -162,6 +169,22 @@ def get_inbox():
             "count": len(uncategorized)
         })
     
+    # Logic to show audit alerts (simplified for demo)
+    # Only checks if no other actions are pending
+    if not actions:
+        collections = kb.get_collections()
+        for col in collections:
+            # We don't want to block the dashboard load, but for small local use this is okay
+            # A real app would use a cached anomaly table updated by a background task
+            anomalies = auditor.audit_collection(col)
+            if anomalies:
+                actions.append({
+                    "type": "audit",
+                    "message": f"{len(anomalies)} miscategorized documents in {col}",
+                    "count": len(anomalies)
+                })
+                break 
+
     return actions
 
 @app.post("/transactions", response_model=Transaction)
@@ -247,6 +270,10 @@ class CreateCollectionRequest(BaseModel):
 @app.post("/collections")
 def create_collection(request: CreateCollectionRequest):
     kb.add_collection(request.name)
+    # Ensure physical directory exists
+    collection_path = os.path.join("data/collections", request.name)
+    if not os.path.exists(collection_path):
+        os.makedirs(collection_path)
     return {"status": "created", "name": request.name}
 
 @app.get("/collections/{collection_name}/documents")
@@ -260,23 +287,49 @@ def add_document(request: DocumentRequest):
 
 @app.post("/documents/upload")
 async def upload_document(file: UploadFile = File(...), collection: str = Form(...)):
-    # Save temporary file
-    temp_path = f"temp_{file.filename}"
-    with open(temp_path, "wb") as buffer:
+    collection_dir = os.path.join("data/collections", collection)
+    if not os.path.exists(collection_dir):
+        os.makedirs(collection_dir)
+        
+    file_path = os.path.join(collection_dir, file.filename)
+    
+    with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        doc_ids = kb.add_file(temp_path, collection=collection)
-        return {"ids": doc_ids, "status": "ingested", "collection": collection}
+        kb.sync() 
+        return {"status": "ingested", "collection": collection, "filename": file.filename}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
 
 @app.post("/search")
 def search_documents(request: SearchRequest):
     return kb.query(request.query, limit=request.limit, collection=request.collection)
+
+@app.post("/audit/{collection_name}")
+def run_audit(collection_name: str):
+    return auditor.audit_collection(collection_name)
+
+class MoveDocumentRequest(BaseModel):
+    filename: str
+    from_collection: str
+    to_collection: str
+
+@app.post("/documents/move")
+def move_document(request: MoveDocumentRequest):
+    old_path = os.path.join("data/collections", request.from_collection, request.filename)
+    new_dir = os.path.join("data/collections", request.to_collection)
+    new_path = os.path.join(new_dir, request.filename)
+    
+    if not os.path.exists(new_dir):
+        os.makedirs(new_dir)
+        
+    if os.path.exists(old_path):
+        shutil.move(old_path, new_path)
+        kb.sync()
+        return {"status": "moved", "filename": request.filename}
+    else:
+        raise HTTPException(status_code=404, detail="File not found on disk")
 
 # Serve Frontend Assets
 frontend_path = os.path.join(os.getcwd(), "frontend/dist")

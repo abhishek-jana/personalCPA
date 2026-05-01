@@ -164,5 +164,21 @@ class Database:
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
+    def delete_document_index(self, filename: str, collection: str):
+        """Removes all chunks and vector indices for a specific file."""
+        cursor = self.conn.cursor()
+        # Find rowids to delete from VSS
+        cursor.execute("SELECT id FROM documents WHERE filename = ? AND collection = ?", (filename, collection))
+        ids = [row[0] for row in cursor.fetchall()]
+        
+        if ids:
+            # Delete from VSS virtual table
+            placeholders = ",".join(["?"] * len(ids))
+            cursor.execute(f"DELETE FROM vss_documents WHERE rowid IN ({placeholders})", tuple(ids))
+            # Delete from documents table
+            cursor.execute(f"DELETE FROM documents WHERE id IN ({placeholders})", tuple(ids))
+            
+        self.conn.commit()
+
     def close(self):
         self.conn.close()
