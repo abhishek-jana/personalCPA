@@ -1,0 +1,20 @@
+[
+  {
+    "id": "tax_deduction_1",
+    "question": "Is a cup of coffee at a cafe a tax-deductible business expense if I am working on my laptop?",
+    "expected_answer_keywords": ["meals", "entertainment", "ordinary", "necessary", "50%", "business purpose"],
+    "description": "Tests basic understanding of business expense categorization."
+  },
+  {
+    "id": "capital_gains_1",
+    "question": "How long do I need to hold an asset for it to qualify for long-term capital gains tax rates in the US?",
+    "expected_answer_keywords": ["one year", "365 days", "more than", "12 months"],
+    "description": "Tests specific knowledge of US tax holding periods."
+  },
+  {
+    "id": "transaction_category_1",
+    "question": "Categorize this transaction: 'Amazon - Office Supplies, $45.00'",
+    "expected_answer_keywords": ["office supplies", "business", "deductible"],
+    "description": "Tests transaction categorization reasoning."
+  }
+]

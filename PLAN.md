@@ -22,10 +22,18 @@ Build a completely local, privacy-first personal finance and tax management appl
 4. Implement the file parsing logic (CSV/OFX) to ingest transactions into the database.
 
 ### Phase 2: Local Intelligence (LLM Integration)
-1. Integrate `llama.cpp` Python bindings.
-2. Implement the text embedding pipeline using a lightweight local model.
-3. Build the RAG retrieval pipeline: querying `sqlite-vss` to fetch relevant tax document chunks based on user prompts.
-4. Create the core prompt templates for transaction categorization and tax advice.
+1. **Multi-Spec Installation**: Create a custom install script (`install_llm.sh`) that supports both lightweight CPU installations (for laptops) and heavyweight GPU compilations (`--gpu` flag) using `llama-cpp-python` and the necessary `CMAKE_ARGS`.
+2. Integrate `llama-cpp-python` Python bindings into the `cpa_core` module.
+3. Implement the text embedding pipeline using a lightweight local model.
+4. Build the RAG retrieval pipeline: querying `sqlite-vss` to fetch relevant tax document chunks based on user prompts.
+5. Create the core prompt templates for transaction categorization and tax advice.
+
+### Phase 2.5: Model Evaluation Framework
+1. **Eval Suite**: Create an `eval/` directory containing a "Gold Standard" dataset of financial/tax questions and expected reasoning.
+2. **Metrics**: Build an `evaluator.py` script to run selected models against the dataset and measure:
+   - **Performance**: Latency (Time to First Token) and Throughput (Tokens/sec).
+   - **Accuracy**: Automated scoring of model responses against the Gold Standard to ensure tax advice remains reliable across different model sizes.
+3. **CLI Integration**: Add a `cpa eval <model_path>` command to easily benchmark new models on the current hardware.
 
 ### Phase 3: Interfaces
 1. **CLI Client**: Build a basic Python CLI (using `Click` or `Typer`) that interacts with the FastAPI endpoints to query balances and import files.

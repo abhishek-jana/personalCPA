@@ -98,5 +98,16 @@ def import_csv(file_path: str, url: str = DEFAULT_URL):
     except httpx.RequestError as exc:
         console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
 
+@app.command()
+def eval(model_path: str, gold_standard: str = "eval/gold_standard.json"):
+    """Evaluate a local model's performance and accuracy."""
+    if not os.path.exists(model_path):
+        console.print(f"[red]Error:[/red] Model not found: {model_path}")
+        return
+
+    console.print(f"[bold blue]Starting Evaluation for model:[/bold blue] {model_path}")
+    # Run the evaluation script
+    os.system(f"uv run python eval/evaluator.py {model_path} --gold_standard {gold_standard}")
+
 if __name__ == "__main__":
     app()
