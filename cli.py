@@ -128,5 +128,40 @@ def chat(url: str = DEFAULT_URL):
         except httpx.RequestError as exc:
             console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
 
+@app.command()
+def add_doc(content: str, url: str = DEFAULT_URL):
+    """Add a document snippet to the vector memory."""
+    try:
+        response = httpx.post(f"{url}/documents", json={"content": content})
+        if response.status_code == 200:
+            console.print(f"[green]Document saved successfully! ID: {response.json()['id']}[/green]")
+        else:
+            console.print(f"[red]Error:[/red] {response.status_code}")
+    except httpx.RequestError as exc:
+        console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
+
+@app.command()
+def search(query: str, limit: int = 3, url: str = DEFAULT_URL):
+    """Search for relevant document snippets using vector search."""
+    try:
+        response = httpx.post(f"{url}/search", json={"query": query, "limit": limit})
+        if response.status_code == 200:
+            results = response.json()
+            if not results:
+                console.print("No relevant documents found.")
+                return
+
+            table = Table(title=f"Search Results for: '{query}'")
+            table.add_column("Content", style="green")
+            table.add_column("Distance", justify="right", style="cyan")
+
+            for r in results:
+                table.add_row(r["content"], f"{r['distance']:.4f}")
+            console.print(table)
+        else:
+            console.print(f"[red]Error:[/red] {response.status_code}")
+    except httpx.RequestError as exc:
+        console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
+
 if __name__ == "__main__":
     app()

@@ -83,3 +83,22 @@ def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
+
+class DocumentRequest(BaseModel):
+    content: str
+
+class SearchRequest(BaseModel):
+    query: str
+    limit: Optional[int] = 5
+
+@app.post("/documents")
+def add_document(request: DocumentRequest):
+    embedding = assistant.embed(request.content)
+    doc_id = db.save_document(request.content, embedding)
+    return {"id": doc_id, "status": "saved"}
+
+@app.post("/search")
+def search_documents(request: SearchRequest):
+    query_embedding = assistant.embed(request.query)
+    results = db.search_documents(query_embedding, limit=request.limit)
+    return results
