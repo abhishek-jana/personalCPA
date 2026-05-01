@@ -1,45 +1,39 @@
 # Project Summary: Personal Local CPA
 
 ## Current Project State (as of May 2026)
-The Personal Local CPA is a privacy-first, offline financial assistant. It is currently in the implementation phase, with a functional core for transaction management, local LLM chat, and vector memory.
+The Personal Local CPA is a privacy-first, offline financial assistant. All initial roadmap slices are now complete. The application provides a full loop from data ingestion to AI-powered, document-grounded tax advice.
 
 ### Tech Stack
 - **Backend**: FastAPI (Python 3.11+)
 - **Dependency Management**: [uv](https://astral.sh/uv)
-- **Database**: SQLite with `sqlite-vss` extension (handling both relational and vector data).
-- **Intelligence**: `llama-cpp-python` (v0.2.75) running **Phi-3 Mini** (GGUF).
-- **Embeddings**: `fastembed` (BGE-small-en-v1.5) for local CPU-efficient vector generation.
-- **Frontend**: Tailwind CSS + Vanilla JS (Single-page static app).
+- **Database**: SQLite with `sqlite-vss` extension.
+- **Intelligence**: `llama-cpp-python` (v0.2.75) running **Phi-3 Mini**.
+- **Embeddings**: `fastembed` (BGE-small-en-v1.5).
+- **Document Processing**: `pypdf`, `beautifulsoup4`, `langchain-text-splitters`.
+- **Frontend**: Tailwind CSS + Vanilla JS.
 - **CLI**: Typer + Rich.
 
-### Progress & Completed Slices
-- [x] **Slice 1: Skeleton**: FastAPI server and Typer CLI established.
-- [x] **Slice 2: Database**: SQLite-VSS persistence layer for transactions.
-- [x] **Slice 3: Visual Spark**: Dashboard UI created (`frontend/index.html`).
-- [x] **Slice 4: The Brains**: LLM integration complete. Interactive chat available via CLI and Web UI.
-- [x] **Slice 5: Vector Memory**: Local text embedding pipeline and vector search integration complete.
-- [x] **Slice 7: Bank Import**: Robust CSV parser implemented.
+### Accomplishments (Roadmap Complete)
+- [x] **Slice 1: Skeleton**: Project infrastructure established.
+- [x] **Slice 2: Database**: Transaction persistence with SQLite.
+- [x] **Slice 3: Visual Spark**: Interactive web dashboard.
+- [x] **Slice 4: The Brains**: Local LLM chat integration.
+- [x] **Slice 5: Vector Memory**: Local semantic search capability.
+- [x] **Slice 6: Tax Guru (RAG)**: Document-grounded AI advice.
+- [x] **Slice 7: Bank Import**: Automatic CSV parsing and normalization.
 
-### Performance (Laptop Baseline)
-- **Hardware**: i5-8350 CPU, 24GB RAM.
-- **Model**: Phi-3-mini-4k-instruct-q4 (~2.4GB).
-- **LLM Speed**: ~2.27 tokens per second (CPU-only).
-- **Embedding Dim**: 384 (BGE-small).
+### How to use the RAG Assistant:
+1. **Ingest your tax docs**:
+   ```bash
+   uv run python scripts/ingest_docs.py path/to/your/doc.pdf
+   ```
+2. **Ask questions**:
+   ```bash
+   uv run python cli.py chat --message "What is my tax bracket?"
+   ```
 
-### File Structure Highlights
-- `/cpa_core`: Core modules for DB, Ingest, Intelligence, and Vector Search.
-- `/data`: Local-only storage for bank statements and tax docs (ignored by Git).
-- `/eval`: Evaluation suite with "Gold Standard" questions.
-- `/models`: Storage for GGUF model files (ignored by Git).
-- `install_llm.sh`: Dual-installation script for CPU (laptop) or GPU (beefy system).
-
-## Resuming the Conversation
-To continue work in a new session:
-1. **Sync dependencies**: `uv sync`
-2. **Start the backend**: `uv run python -m uvicorn main:app --reload`
-3. **Trigger next slice**: Start with **Slice 6: RAG-based Tax Guru**.
-
-### Goals for Slice 6
-- Implement document ingestion script for large tax documents (PDF/HTML).
-- Connection between vector search and the LLM chat assistant.
-- Verification of grounded tax advice.
+## Next Steps & Future Enhancements
+- **Multi-Year Analysis**: Compare tax liability across multiple years stored in `data/previous_years_tax`.
+- **Chart Visualizations**: Add Plotly or Chart.js to the frontend for better spending analytics.
+- **Improved Retrieval**: Implement re-ranking or hybrid search for even better tax advice.
+- **Deployment**: Move to a beefier GPU system using `./install_llm.sh --gpu`.

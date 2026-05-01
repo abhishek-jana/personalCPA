@@ -35,6 +35,7 @@ class Transaction(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    use_rag: Optional[bool] = True
 
 class ChatResponse(BaseModel):
     answer: str
@@ -77,11 +78,15 @@ async def import_transactions(file: UploadFile = File(...)):
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     try:
-        answer = assistant.chat(request.message)
+        if request.use_rag:
+            answer = assistant.rag_chat(request.message, db)
+        else:
+            answer = assistant.chat(request.message)
         return ChatResponse(answer=answer)
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        print(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 class DocumentRequest(BaseModel):

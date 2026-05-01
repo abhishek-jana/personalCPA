@@ -110,16 +110,32 @@ def eval(model_path: str, gold_standard: str = "eval/gold_standard.json"):
     os.system(f"uv run python eval/evaluator.py {model_path} --gold_standard {gold_standard}")
 
 @app.command()
-def chat(url: str = DEFAULT_URL):
-    """Start an interactive chat session with the CPA Assistant."""
-    console.print("[bold blue]CPA Assistant is ready. Type 'exit' or 'quit' to end.[/bold blue]")
+def chat(
+    message: Optional[str] = typer.Option(None, "--message", "-m", help="Message to send to the assistant."),
+    url: str = DEFAULT_URL, 
+    rag: bool = typer.Option(True, help="Use RAG to ground the assistant's advice.")
+):
+    """Start an interactive or one-off chat session with the CPA Assistant."""
+    if message:
+        try:
+            response = httpx.post(f"{url}/chat", json={"message": message, "use_rag": rag}, timeout=120.0)
+            if response.status_code == 200:
+                answer = response.json()["answer"]
+                console.print(f"[bold blue]Assistant:[/bold blue] {answer}")
+            else:
+                console.print(f"[red]Error:[/red] {response.status_code} - {response.text}")
+        except httpx.RequestError as exc:
+            console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
+        return
+
+    console.print(f"[bold blue]CPA Assistant is ready (RAG: {'ON' if rag else 'OFF'}). Type 'exit' or 'quit' to end.[/bold blue]")
     while True:
-        message = console.input("[bold green]You: [/bold green]")
-        if message.lower() in ["exit", "quit"]:
+        user_message = console.input("[bold green]You: [/bold green]")
+        if user_message.lower() in ["exit", "quit"]:
             break
         
         try:
-            response = httpx.post(f"{url}/chat", json={"message": message}, timeout=120.0)
+            response = httpx.post(f"{url}/chat", json={"message": user_message, "use_rag": rag}, timeout=120.0)
             if response.status_code == 200:
                 answer = response.json()["answer"]
                 console.print(f"[bold blue]Assistant:[/bold blue] {answer}")

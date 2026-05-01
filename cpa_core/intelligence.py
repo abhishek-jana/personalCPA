@@ -40,6 +40,37 @@ class CPAAssistant:
         )
         return response['choices'][0]['text'].strip()
 
+    def rag_chat(self, message: str, db: any) -> str:
+        """Perform RAG by retrieving context from the database before chatting."""
+        # 1. Embed query
+        query_embedding = self.embed(message)
+        
+        # 2. Search DB
+        results = db.search_documents(query_embedding, limit=3)
+        context = "\n\n".join([r["content"] for r in results])
+        
+        # 3. Construct prompt
+        rag_prompt = f"""### Instructions:
+You are a helpful and accurate CPA Assistant. Use the following pieces of context to answer the user's question.
+If the answer is not in the context, use your general knowledge but mention it is not in the provided documents.
+
+### Context:
+{context}
+
+### User Question:
+{message}
+
+### Answer:
+"""
+        
+        response = self.llm(
+            rag_prompt,
+            max_tokens=512,
+            stop=["###", "User Question:"],
+            echo=False
+        )
+        return response['choices'][0]['text'].strip()
+
     def embed(self, text: str) -> List[float]:
         """Generate vector embedding for a given text."""
         # list() is needed as embed() returns a generator
