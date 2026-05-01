@@ -5,55 +5,99 @@ A completely local, privacy-first personal finance and tax management applicatio
 ## Overview
 This application is designed for individuals who want the power of AI-driven financial advice without compromising their data privacy. It runs entirely on your local machine, using a local LLM and a local vector database.
 
-## Features (Current)
-- **FastAPI Backend**: A robust local server handling data and logic.
-- **SQLite-VSS Database**: Relational storage for transactions + vector storage for tax knowledge.
-- **CSV Ingestion**: Easily import bank statements without cloud syncing.
-- **Rich CLI**: Manage your finances directly from the terminal.
-- **Web Dashboard**: Simple, interactive visualization of your transactions.
+## System Architecture
+The project follows a **Deep Module** architecture, separating the "Brain" (LLM reasoning) from the "Memory" (Vector storage).
+
+```mermaid
+graph TD
+    subgraph UI [Interfaces]
+        CLI[Typer CLI]
+        Web[Tailwind Web UI]
+    end
+
+    subgraph API [Backend Layer]
+        FastAPI[FastAPI Server]
+    end
+
+    subgraph Core [Deep Modules]
+        Assistant[CPA Assistant - The Brain]
+        KB[KnowledgeBase - The Memory]
+        DB[Database - Relational Store]
+    end
+
+    subgraph External [Local Files]
+        CSV[Bank CSVs]
+        PDF[Tax PDFs]
+    end
+
+    CLI --> FastAPI
+    Web --> FastAPI
+    
+    FastAPI --> Assistant
+    FastAPI --> KB
+    FastAPI --> DB
+    
+    Assistant -->|Dependency Injection| KB
+    KB -->|Vector Ops| DB
+    
+    CSV -->|Ingest| DB
+    PDF -->|Ingest| KB
+```
+
+### Key Modules
+- **`CPAAssistant`**: Encapsulates persona, prompt engineering, and LLM inference.
+- **`KnowledgeBase`**: Manages the RAG lifecycle: text extraction, chunking, and semantic embedding.
+- **`Database`**: Handles SQLite-VSS persistence for both transactions and vector memory.
+- **`Ingest`**: Robust parsing and normalization of messy financial data.
+
+## Features
+- **Local Intelligence**: Uses `llama-cpp-python` to run GGUF models (like Phi-3) on your hardware.
+- **Semantic Memory**: Grounded tax advice using RAG (Retrieval-Augmented Generation).
+- **Multi-Spec**: Support for both CPU (laptop) and GPU (workstation) installations.
+- **Evaluation Framework**: Built-in benchmarking suite to compare model speed and accuracy.
 
 ## Tech Stack
-- **Language**: Python 3.11+
-- **Dependency Management**: [uv](https://github.com/astral-sh/uv)
-- **Framework**: FastAPI, Typer
-- **Database**: SQLite with `sqlite-vss`
-- **Frontend**: Tailwind CSS + Vanilla JS (currently a static single-page app)
+- **Backend**: Python 3.11+, FastAPI, `uv`
+- **Intelligence**: `llama-cpp-python`, `fastembed` (BGE-small)
+- **Database**: SQLite with `sqlite-vss` extension
+- **Frontend**: Tailwind CSS + Vanilla JS
 
 ## Getting Started
 
 ### Prerequisites
-- Python 3.11 or higher.
 - `uv` (Install with `curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- For GPU support: CUDA Toolkit.
 
 ### Setup
 1. Clone the repository.
-2. Sync dependencies:
+2. Install LLM dependencies:
+   ```bash
+   # For CPU (Laptop)
+   ./install_llm.sh
+   # For GPU (CUDA)
+   ./install_llm.sh --gpu
+   ```
+3. Sync remaining dependencies:
    ```bash
    uv sync
    ```
 
 ### Running the Application
-1. **Start the Backend Server**:
+1. **Start the Backend**:
    ```bash
    uv run python -m uvicorn main:app --reload
    ```
 2. **Use the CLI**:
    ```bash
-   # Check status
-   uv run python cli.py status
-   # List transactions
-   uv run python cli.py list
-   # Import a CSV
-   uv run python cli.py import-csv data/bank_statements/sample.csv
+   # Chat with your assistant
+   uv run python cli.py chat
+   # Benchmark a model
+   uv run python cli.py eval models/your_model.gguf --rag
    ```
-3. **Open the Web UI**:
-   Open `frontend/index.html` in your favorite web browser.
 
 ## Roadmap
-- [x] Slice 1: Skeleton & CLI/API Connectivity
-- [x] Slice 2: Database Persistence
-- [x] Slice 3: Web Dashboard Scaffolding
-- [ ] Slice 4: Local LLM Integration (Intelligence)
-- [ ] Slice 5: Vector Memory & Embedding Pipeline
-- [ ] Slice 6: RAG-based Tax Guru
-- [x] Slice 7: Bank Statement Import Logic
+- [x] Slice 1-4: Core infrastructure, LLM, and Chat.
+- [x] Slice 5: Vector Memory & Embedding.
+- [x] Slice 6: RAG-based Tax Guru.
+- [x] Slice 7: Bank Statement Ingestion.
+- [x] **Architectural Refactor**: Deep modules and Dependency Injection.
