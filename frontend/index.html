@@ -31,8 +31,12 @@
             </div>
 
             <!-- Main Content -->
-            <div class="md:col-span-3">
+            <div class="md:col-span-3 space-y-6">
+                <!-- Transactions Table -->
                 <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-700">Recent Transactions</h2>
+                    </div>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -46,6 +50,28 @@
                             <!-- Transactions will be loaded here -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Chat Assistant -->
+                <div class="bg-white rounded-lg shadow flex flex-col h-[500px]">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <h2 class="text-lg font-semibold text-gray-700">CPA Assistant</h2>
+                    </div>
+                    <div id="chat-messages" class="flex-grow p-6 overflow-y-auto space-y-4">
+                        <div class="flex justify-start">
+                            <div class="bg-blue-100 text-blue-800 p-3 rounded-lg max-w-[80%]">
+                                Hello! I am your local CPA Assistant. How can I help you today?
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-gray-200">
+                        <div class="flex space-x-2">
+                            <input type="text" id="chat-input" placeholder="Ask a question..." class="flex-grow border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="send-btn" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+                                Send
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -95,6 +121,55 @@
         }
 
         document.getElementById('refresh-btn').addEventListener('click', loadTransactions);
+
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function addMessage(text, isUser) {
+            const wrapper = document.createElement('div');
+            wrapper.className = isUser ? 'flex justify-end' : 'flex justify-start';
+            
+            const msg = document.createElement('div');
+            msg.className = isUser 
+                ? 'bg-blue-600 text-white p-3 rounded-lg max-w-[80%]' 
+                : 'bg-gray-100 text-gray-800 p-3 rounded-lg max-w-[80%] border border-gray-200';
+            msg.textContent = text;
+            
+            wrapper.appendChild(msg);
+            chatMessages.appendChild(wrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            addMessage(text, true);
+            chatInput.value = '';
+
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage(data.answer, false);
+                } else {
+                    addMessage('Error: Could not connect to the assistant.', false);
+                }
+            } catch (e) {
+                addMessage('An error occurred while communicating with the assistant.', false);
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
 
         document.getElementById('csv-file').addEventListener('change', async (e) => {
             const file = e.target.files[0];

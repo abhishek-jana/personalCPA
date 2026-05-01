@@ -5,7 +5,7 @@ from cpa_core.ingest import parse_csv
 
 class TestIngestFlexibility(unittest.TestCase):
     def setUp(self):
-        self.test_file = "test_data/flexible.csv"
+        self.test_file = "flexible_test.csv"
         with open(self.test_file, 'w', encoding='utf-8') as f:
             f.write("date,DESCRIPTION,amt\n")
             f.write("2023-10-01,Test 1,100.00\n")

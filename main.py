@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from cpa_core.db import Database
 from cpa_core.ingest import parse_csv
+from cpa_core.intelligence import CPAAssistant
 import os
 import shutil
 
@@ -21,12 +22,22 @@ app.add_middleware(
 db = Database("cpa.db")
 db.init_db()
 
+# Initialize Assistant
+MODEL_PATH = os.getenv("CPA_MODEL_PATH", "models/Phi-3-mini-4k-instruct-q4.gguf")
+assistant = CPAAssistant(model_path=MODEL_PATH)
+
 class Transaction(BaseModel):
     id: Optional[int] = None
     date: str
     description: str
     amount: float
     category: Optional[str] = None
+
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    answer: str
 
 @app.get("/status")
 def read_status():
@@ -62,3 +73,13 @@ async def import_transactions(file: UploadFile = File(...)):
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest):
+    try:
+        answer = assistant.chat(request.message)
+        return ChatResponse(answer=answer)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -109,5 +109,24 @@ def eval(model_path: str, gold_standard: str = "eval/gold_standard.json"):
     # Run the evaluation script
     os.system(f"uv run python eval/evaluator.py {model_path} --gold_standard {gold_standard}")
 
+@app.command()
+def chat(url: str = DEFAULT_URL):
+    """Start an interactive chat session with the CPA Assistant."""
+    console.print("[bold blue]CPA Assistant is ready. Type 'exit' or 'quit' to end.[/bold blue]")
+    while True:
+        message = console.input("[bold green]You: [/bold green]")
+        if message.lower() in ["exit", "quit"]:
+            break
+        
+        try:
+            response = httpx.post(f"{url}/chat", json={"message": message}, timeout=120.0)
+            if response.status_code == 200:
+                answer = response.json()["answer"]
+                console.print(f"[bold blue]Assistant:[/bold blue] {answer}")
+            else:
+                console.print(f"[red]Error:[/red] {response.status_code} - {response.text}")
+        except httpx.RequestError as exc:
+            console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
+
 if __name__ == "__main__":
     app()

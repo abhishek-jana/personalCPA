@@ -4,7 +4,7 @@ from cpa_core.ingest import parse_csv
 
 class TestIngest(unittest.TestCase):
     def test_parse_csv(self):
-        file_path = "test_data/sample.csv"
+        file_path = "data/bank_statements/sample.csv"
         # Ensure we are in the right directory or provide absolute path
         abs_path = os.path.abspath(file_path)
         transactions = parse_csv(abs_path)
