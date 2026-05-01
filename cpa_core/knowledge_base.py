@@ -15,6 +15,7 @@ class KnowledgeBase:
             chunk_overlap=100,
             length_function=len,
         )
+        self._failed_files = set() # Track files that cause persistent errors in this session
 
     @property
     def embedder(self) -> TextEmbedding:
@@ -99,12 +100,15 @@ class KnowledgeBase:
 
             # 1. Add files that are on disk but not in DB
             for filename in disk_files:
-                if filename not in db_files:
+                file_id = f"{collection}/{filename}"
+                if filename not in db_files and file_id not in self._failed_files:
                     try:
                         print(f"Sync: Ingesting new file {filename} into {collection}")
                         self.add_file(os.path.join(collection_path, filename), collection=collection)
                     except Exception as e:
                         print(f"Error syncing {filename}: {e}")
+                        # Mark as failed for this session so we don't loop infinitely
+                        self._failed_files.add(file_id)
 
             # 2. Remove files that are in DB but not on disk
             for filename in db_files:
@@ -113,7 +117,8 @@ class KnowledgeBase:
                     self.db.delete_document_index(filename, collection)
 
     def _extract_pdf(self, file_path: str) -> str:
-        reader = PdfReader(file_path)
+        # Use strict=False to handle slightly corrupted PDFs
+        reader = PdfReader(file_path, strict=False)
         return "\n".join([page.extract_text() for page in reader.pages])
 
     def _extract_html(self, file_path: str) -> str:
