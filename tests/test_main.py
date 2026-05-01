@@ -31,9 +31,9 @@ def test_create_and_list_transactions():
     assert len(transactions) >= 1
     assert any(t["description"] == "Coffee" for t in transactions)
 
-@patch("main.assistant.rag_chat")
-def test_chat_endpoint_with_rag(mock_rag_chat):
-    mock_rag_chat.return_value = "Mocked RAG advice"
+@patch("main.assistant.ask")
+def test_chat_endpoint_with_rag(mock_ask):
+    mock_ask.return_value = "Mocked RAG advice"
     response = client.post("/chat", json={"message": "What is tax?", "use_rag": True})
     assert response.status_code == 200
     assert response.json() == {"answer": "Mocked RAG advice"}

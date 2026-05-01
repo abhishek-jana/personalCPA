@@ -26,9 +26,9 @@ db.init_db()
 # Initialize KnowledgeBase
 kb = KnowledgeBase(db)
 
-# Initialize Assistant
+# Initialize Assistant with Dependency Injection
 MODEL_PATH = os.getenv("CPA_MODEL_PATH", "models/Phi-3-mini-4k-instruct-q4.gguf")
-assistant = CPAAssistant(model_path=MODEL_PATH)
+assistant = CPAAssistant(model_path=MODEL_PATH, kb=kb)
 
 class Transaction(BaseModel):
     id: Optional[int] = None
@@ -82,10 +82,8 @@ async def import_transactions(file: UploadFile = File(...)):
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     try:
-        if request.use_rag:
-            answer = assistant.rag_chat(request.message, kb)
-        else:
-            answer = assistant.chat(request.message)
+        # High-leverage call: Assistant manages the RAG logic
+        answer = assistant.ask(request.message, use_rag=request.use_rag)
         return ChatResponse(answer=answer)
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail=str(e))

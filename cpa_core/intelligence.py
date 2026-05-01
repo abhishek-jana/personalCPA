@@ -1,11 +1,24 @@
 from llama_cpp import Llama
 import os
-from typing import Optional
+from typing import Optional, List, Protocol
+
+class Searchable(Protocol):
+    def query(self, text: str, limit: int = 3) -> List[dict]:
+        ...
 
 class CPAAssistant:
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, kb: Optional[Searchable] = None):
         self.model_path = model_path
+        self.kb = kb
         self._llm: Optional[Llama] = None
+        
+        # Internalized Persona & Prompts
+        self.persona = "You are a helpful and accurate CPA Assistant specializing in personal finance and tax advice."
+        self.instructions = (
+            "Use the provided context to answer the user's question. "
+            "If the answer is not in the context, use your general knowledge but mention "
+            "it is not in the provided documents."
+        )
 
     @property
     def llm(self) -> Llama:
@@ -21,26 +34,25 @@ class CPAAssistant:
             )
         return self._llm
 
-    def chat(self, message: str) -> str:
-        prompt = f"Q: {message}\nA:"
-        response = self.llm(
-            prompt,
-            max_tokens=512,
-            stop=["Q:", "\n"],
-            echo=False
-        )
-        return response['choices'][0]['text'].strip()
+    def ask(self, message: str, use_rag: bool = True) -> str:
+        """The primary high-leverage interface for the assistant."""
+        if use_rag and self.kb:
+            return self._rag_chat(message)
+        return self._simple_chat(message)
 
-    def rag_chat(self, message: str, kb: any) -> str:
-        """Perform RAG by retrieving context from the KnowledgeBase before chatting."""
-        # 1. Search KB
-        results = kb.query(message, limit=3)
+    def _simple_chat(self, message: str) -> str:
+        prompt = f"### Instruction:\n{self.persona}\n\n### User Question:\n{message}\n\n### Answer:\n"
+        return self._inference(prompt, stop=["###", "User Question:"])
+
+    def _rag_chat(self, message: str) -> str:
+        # 1. Retrieve context from memory
+        results = self.kb.query(message, limit=3)
         context = "\n\n".join([r["content"] for r in results])
         
-        # 2. Construct prompt
-        rag_prompt = f"""### Instructions:
-You are a helpful and accurate CPA Assistant. Use the following pieces of context to answer the user's question.
-If the answer is not in the context, use your general knowledge but mention it is not in the provided documents.
+        # 2. Construct grounded prompt
+        rag_prompt = f"""### Instruction:
+{self.persona}
+{self.instructions}
 
 ### Context:
 {context}
@@ -50,11 +62,13 @@ If the answer is not in the context, use your general knowledge but mention it i
 
 ### Answer:
 """
-        
+        return self._inference(rag_prompt, stop=["###", "User Question:"])
+
+    def _inference(self, prompt: str, stop: List[str]) -> str:
         response = self.llm(
-            rag_prompt,
+            prompt,
             max_tokens=512,
-            stop=["###", "User Question:"],
+            stop=stop,
             echo=False
         )
         return response['choices'][0]['text'].strip()
