@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from cpa_core.intelligence import CPAAssistant
+from cpa_core.intelligence import CPAAssistant, ChatResult
 
 class TestIntelligence(unittest.TestCase):
     @patch('cpa_core.intelligence.os.path.exists')
@@ -17,9 +17,10 @@ class TestIntelligence(unittest.TestCase):
         }
         
         assistant = CPAAssistant(model_path="dummy_path")
-        response = assistant.ask("Hello", use_rag=False)
+        result = assistant.ask("Hello", use_rag=False)
         
-        self.assertEqual(response, "Simple response.")
+        self.assertIsInstance(result, ChatResult)
+        self.assertEqual(result.answer, "Simple response.")
         mock_instance.assert_called_once()
 
     @patch('cpa_core.intelligence.os.path.exists')
@@ -37,9 +38,11 @@ class TestIntelligence(unittest.TestCase):
         mock_kb.query.return_value = [{"content": "Important context", "distance": 0.1}]
         
         assistant = CPAAssistant(model_path="dummy_path", kb=mock_kb)
-        response = assistant.ask("Query", use_rag=True)
+        result = assistant.ask("Query", use_rag=True)
         
-        self.assertEqual(response, "Context-based answer.")
+        self.assertIsInstance(result, ChatResult)
+        self.assertEqual(result.answer, "Context-based answer.")
+        self.assertEqual(result.context, "Important context")
         mock_kb.query.assert_called_once_with("Query", limit=3)
 
 if __name__ == "__main__":

@@ -1,6 +1,16 @@
+import time
 from llama_cpp import Llama
 import os
-from typing import Optional, List, Protocol
+from typing import Optional, List, Protocol, Dict
+from dataclasses import dataclass
+
+@dataclass
+class ChatResult:
+    answer: str
+    latency: float
+    tokens: int
+    tps: float
+    context: Optional[str] = None
 
 class Searchable(Protocol):
     def query(self, text: str, limit: int = 3) -> List[dict]:
@@ -34,17 +44,17 @@ class CPAAssistant:
             )
         return self._llm
 
-    def ask(self, message: str, use_rag: bool = True) -> str:
+    def ask(self, message: str, use_rag: bool = True) -> ChatResult:
         """The primary high-leverage interface for the assistant."""
         if use_rag and self.kb:
             return self._rag_chat(message)
         return self._simple_chat(message)
 
-    def _simple_chat(self, message: str) -> str:
+    def _simple_chat(self, message: str) -> ChatResult:
         prompt = f"### Instruction:\n{self.persona}\n\n### User Question:\n{message}\n\n### Answer:\n"
         return self._inference(prompt, stop=["###", "User Question:"])
 
-    def _rag_chat(self, message: str) -> str:
+    def _rag_chat(self, message: str) -> ChatResult:
         # 1. Retrieve context from memory
         results = self.kb.query(message, limit=3)
         context = "\n\n".join([r["content"] for r in results])
@@ -62,13 +72,28 @@ class CPAAssistant:
 
 ### Answer:
 """
-        return self._inference(rag_prompt, stop=["###", "User Question:"])
+        result = self._inference(rag_prompt, stop=["###", "User Question:"])
+        result.context = context
+        return result
 
-    def _inference(self, prompt: str, stop: List[str]) -> str:
+    def _inference(self, prompt: str, stop: List[str]) -> ChatResult:
+        start_time = time.time()
         response = self.llm(
             prompt,
             max_tokens=512,
             stop=stop,
             echo=False
         )
-        return response['choices'][0]['text'].strip()
+        end_time = time.time()
+        
+        latency = end_time - start_time
+        answer = response['choices'][0]['text'].strip()
+        tokens = response['usage']['completion_tokens']
+        tps = tokens / latency if latency > 0 else 0
+        
+        return ChatResult(
+            answer=answer,
+            latency=latency,
+            tokens=tokens,
+            tps=tps
+        )

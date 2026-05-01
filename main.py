@@ -43,6 +43,9 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    latency: float
+    tokens: int
+    tps: float
 
 @app.get("/status")
 def read_status():
@@ -83,8 +86,13 @@ async def import_transactions(file: UploadFile = File(...)):
 def chat(request: ChatRequest):
     try:
         # High-leverage call: Assistant manages the RAG logic
-        answer = assistant.ask(request.message, use_rag=request.use_rag)
-        return ChatResponse(answer=answer)
+        result = assistant.ask(request.message, use_rag=request.use_rag)
+        return ChatResponse(
+            answer=result.answer,
+            latency=result.latency,
+            tokens=result.tokens,
+            tps=result.tps
+        )
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:

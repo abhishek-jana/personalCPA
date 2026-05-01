@@ -99,15 +99,22 @@ def import_csv(file_path: str, url: str = DEFAULT_URL):
         console.print(f"[red]An error occurred while requesting {exc.request.url!r}.[/red]")
 
 @app.command()
-def eval(model_path: str, gold_standard: str = "eval/gold_standard.json"):
+def eval(
+    model_path: str, 
+    gold_standard: str = "eval/gold_standard.json",
+    rag: bool = typer.Option(False, help="Enable RAG during evaluation.")
+):
     """Evaluate a local model's performance and accuracy."""
     if not os.path.exists(model_path):
         console.print(f"[red]Error:[/red] Model not found: {model_path}")
         return
 
-    console.print(f"[bold blue]Starting Evaluation for model:[/bold blue] {model_path}")
+    console.print(f"[bold blue]Starting Evaluation for model:[/bold blue] {model_path} (RAG: {'ON' if rag else 'OFF'})")
     # Run the evaluation script
-    os.system(f"uv run python eval/evaluator.py {model_path} --gold_standard {gold_standard}")
+    cmd = f"export PYTHONPATH=$PYTHONPATH:. && uv run python eval/evaluator.py {model_path} --gold_standard {gold_standard}"
+    if rag:
+        cmd += " --rag"
+    os.system(cmd)
 
 @app.command()
 def chat(

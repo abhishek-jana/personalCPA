@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from main import app
 from unittest.mock import patch
+from cpa_core.intelligence import ChatResult
 import pytest
 import os
 
@@ -33,10 +34,15 @@ def test_create_and_list_transactions():
 
 @patch("main.assistant.ask")
 def test_chat_endpoint_with_rag(mock_ask):
-    mock_ask.return_value = "Mocked RAG advice"
+    mock_ask.return_value = ChatResult(
+        answer="Mocked RAG advice",
+        latency=1.0,
+        tokens=10,
+        tps=10.0
+    )
     response = client.post("/chat", json={"message": "What is tax?", "use_rag": True})
     assert response.status_code == 200
-    assert response.json() == {"answer": "Mocked RAG advice"}
+    assert response.json()["answer"] == "Mocked RAG advice"
 
 @patch("main.kb.add_text")
 def test_add_document_endpoint(mock_add_text):
