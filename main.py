@@ -37,6 +37,16 @@ class Transaction(BaseModel):
     amount: float
     category: Optional[str] = None
 
+class PulseResponse(BaseModel):
+    tax_estimate: float
+    savings_rate: str
+    total_spent: float
+
+class InboxAction(BaseModel):
+    type: str
+    message: str
+    count: int
+
 class ChatRequest(BaseModel):
     message: str
     use_rag: Optional[bool] = True
@@ -50,6 +60,31 @@ class ChatResponse(BaseModel):
 @app.get("/status")
 def read_status():
     return {"status": "ok", "version": "0.1.0"}
+
+@app.get("/dashboard/pulse", response_model=PulseResponse)
+def get_pulse():
+    transactions = db.get_transactions()
+    total_spent = sum(t["amount"] for t in transactions)
+    return {
+        "tax_estimate": 0.0,
+        "savings_rate": "0%",
+        "total_spent": total_spent
+    }
+
+@app.get("/dashboard/inbox", response_model=List[InboxAction])
+def get_inbox():
+    transactions = db.get_transactions()
+    uncategorized = [t for t in transactions if t.get("category") is None]
+    
+    actions = []
+    if uncategorized:
+        actions.append({
+            "type": "categorization",
+            "message": f"Categorize {len(uncategorized)} transactions",
+            "count": len(uncategorized)
+        })
+    
+    return actions
 
 @app.post("/transactions", response_model=Transaction)
 def create_transaction(transaction: Transaction):

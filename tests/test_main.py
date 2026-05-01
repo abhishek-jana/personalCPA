@@ -50,3 +50,31 @@ def test_add_document_endpoint(mock_add_text):
     response = client.post("/documents", json={"content": "New document content"})
     assert response.status_code == 200
     assert response.json() == {"ids": [1, 2], "status": "saved"}
+
+def test_dashboard_pulse():
+    response = client.get("/dashboard/pulse")
+    assert response.status_code == 200
+    data = response.json()
+    assert "tax_estimate" in data
+    assert "savings_rate" in data
+    assert "total_spent" in data
+    assert isinstance(data["total_spent"], (int, float))
+
+def test_dashboard_inbox():
+    # Add an uncategorized transaction to ensure we get an action
+    transaction_data = {
+        "date": "2024-05-01",
+        "description": "Uncategorized Item",
+        "amount": 10.0,
+        "category": None
+    }
+    client.post("/transactions", json=transaction_data)
+    
+    response = client.get("/dashboard/inbox")
+    assert response.status_code == 200
+    actions = response.json()
+    assert isinstance(actions, list)
+    if len(actions) > 0:
+        assert actions[0]["type"] == "categorization"
+        assert "Categorize" in actions[0]["message"]
+        assert actions[0]["count"] >= 1
