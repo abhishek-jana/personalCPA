@@ -31,10 +31,16 @@ def test_create_and_list_transactions():
     assert len(transactions) >= 1
     assert any(t["description"] == "Coffee" for t in transactions)
 
-@patch("main.assistant.chat")
-def test_chat_endpoint(mock_chat):
-    mock_chat.return_value = "Mocked advice"
-    response = client.post("/chat", json={"message": "What is tax?"})
+@patch("main.assistant.rag_chat")
+def test_chat_endpoint_with_rag(mock_rag_chat):
+    mock_rag_chat.return_value = "Mocked RAG advice"
+    response = client.post("/chat", json={"message": "What is tax?", "use_rag": True})
     assert response.status_code == 200
-    assert response.json() == {"answer": "Mocked advice"}
-    mock_chat.assert_called_once_with("What is tax?")
+    assert response.json() == {"answer": "Mocked RAG advice"}
+
+@patch("main.kb.add_text")
+def test_add_document_endpoint(mock_add_text):
+    mock_add_text.return_value = [1, 2]
+    response = client.post("/documents", json={"content": "New document content"})
+    assert response.status_code == 200
+    assert response.json() == {"ids": [1, 2], "status": "saved"}

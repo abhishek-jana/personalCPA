@@ -5,6 +5,7 @@ from typing import List, Optional
 from cpa_core.db import Database
 from cpa_core.ingest import parse_csv
 from cpa_core.intelligence import CPAAssistant
+from cpa_core.knowledge_base import KnowledgeBase
 import os
 import shutil
 
@@ -21,6 +22,9 @@ app.add_middleware(
 
 db = Database("cpa.db")
 db.init_db()
+
+# Initialize KnowledgeBase
+kb = KnowledgeBase(db)
 
 # Initialize Assistant
 MODEL_PATH = os.getenv("CPA_MODEL_PATH", "models/Phi-3-mini-4k-instruct-q4.gguf")
@@ -79,7 +83,7 @@ async def import_transactions(file: UploadFile = File(...)):
 def chat(request: ChatRequest):
     try:
         if request.use_rag:
-            answer = assistant.rag_chat(request.message, db)
+            answer = assistant.rag_chat(request.message, kb)
         else:
             answer = assistant.chat(request.message)
         return ChatResponse(answer=answer)
@@ -98,12 +102,9 @@ class SearchRequest(BaseModel):
 
 @app.post("/documents")
 def add_document(request: DocumentRequest):
-    embedding = assistant.embed(request.content)
-    doc_id = db.save_document(request.content, embedding)
-    return {"id": doc_id, "status": "saved"}
+    doc_ids = kb.add_text(request.content)
+    return {"ids": doc_ids, "status": "saved"}
 
 @app.post("/search")
 def search_documents(request: SearchRequest):
-    query_embedding = assistant.embed(request.query)
-    results = db.search_documents(query_embedding, limit=request.limit)
-    return results
+    return kb.query(request.query, limit=request.limit)

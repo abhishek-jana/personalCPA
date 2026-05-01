@@ -13,6 +13,7 @@ A completely local, privacy-first personal finance and tax management applicatio
 - **Transaction**: A single financial record (income or expense).
 - **RAG**: Retrieval-Augmented Generation, used to ground LLM tax advice in real documents.
 - **CPA Assistant**: The AI-powered component providing tax and financial advice.
+- **KnowledgeBase**: A deep module encapsulating text chunking, embedding generation, and vector persistence for semantic memory.
 
 ## Current State
 - Initial implementation plan established in `PLAN.md`.

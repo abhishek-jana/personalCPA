@@ -1,60 +1,22 @@
 import os
 import argparse
-from pypdf import PdfReader
-from bs4 import BeautifulSoup
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from cpa_core.db import Database
-from cpa_core.intelligence import CPAAssistant
-
-def extract_text_from_pdf(file_path):
-    reader = PdfReader(file_path)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() + "\n"
-    return text
-
-def extract_text_from_html(file_path):
-    with open(file_path, "r", encoding="utf-8") as f:
-        soup = BeautifulSoup(f, "html.parser")
-        return soup.get_text()
+from cpa_core.knowledge_base import KnowledgeBase
 
 def ingest_document(file_path, db_path, model_path):
-    ext = os.path.splitext(file_path)[1].lower()
-    if ext == ".pdf":
-        text = extract_text_from_pdf(file_path)
-    elif ext in [".html", ".htm"]:
-        text = extract_text_from_html(file_path)
-    elif ext == ".txt":
-        with open(file_path, "r", encoding="utf-8") as f:
-            text = f.read()
-    else:
-        print(f"Unsupported file type: {ext}")
-        return
-
-    # Chunking
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=100,
-        length_function=len,
-    )
-    chunks = text_splitter.split_text(text)
-    print(f"Split document into {len(chunks)} chunks.")
-
-    # Initialize DB and Assistant
+    # Initialize DB and KnowledgeBase
     db = Database(db_path)
     db.init_db()
-    assistant = CPAAssistant(model_path)
+    kb = KnowledgeBase(db)
 
-    # Process and save chunks
-    for i, chunk in enumerate(chunks):
-        if not chunk.strip():
-            continue
-        print(f"Ingesting chunk {i+1}/{len(chunks)}...", end="\r")
-        embedding = assistant.embed(chunk)
-        db.save_document(chunk, embedding)
-    
-    print(f"\nSuccessfully ingested {file_path}")
-    db.close()
+    print(f"Ingesting {file_path} into KnowledgeBase...")
+    try:
+        doc_ids = kb.add_file(file_path)
+        print(f"Successfully ingested {len(doc_ids)} chunks from {file_path}")
+    except Exception as e:
+        print(f"Error during ingestion: {e}")
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ingest tax documents into vector memory.")

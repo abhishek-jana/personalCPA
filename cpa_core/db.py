@@ -66,13 +66,10 @@ class Database:
         return [dict(row) for row in rows]
 
     def save_document(self, content: str, embedding: list):
+        """Internal method used by KnowledgeBase."""
         cursor = self.conn.cursor()
-        # 1. Insert into document table
         cursor.execute("INSERT INTO documents (content) VALUES (?)", (content,))
         doc_id = cursor.lastrowid
-        
-        # 2. Insert into VSS table
-        # sqlite-vss expects a JSON string or blob for the embedding
         cursor.execute(
             "INSERT INTO vss_documents(rowid, embedding) VALUES (?, ?)",
             (doc_id, json.dumps(embedding))
@@ -81,9 +78,8 @@ class Database:
         return doc_id
 
     def search_documents(self, query_embedding: list, limit: int = 5):
+        """Internal method used by KnowledgeBase."""
         cursor = self.conn.cursor()
-        # Join VSS table with documents table to get content
-        # vss_search() returns distance, we order by it
         cursor.execute("""
             SELECT 
                 d.content,
