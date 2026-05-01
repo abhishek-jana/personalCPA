@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+.pytest_cache/
+
+# Databases
+*.db
+*.db-journal
+
+# Models
+models/
+*.gguf
+
+# Data (Sensitive local financial data)
+data/
+temp_*
+
+# OS
+.DS_Store
+Thumbs.db
