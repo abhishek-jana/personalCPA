@@ -10,13 +10,14 @@ The project follows a **Deep Module** architecture, separating the "Brain" (LLM 
 
 ```mermaid
 graph TD
-    subgraph UI [Interfaces]
+    subgraph UI [User Interfaces]
         CLI[Typer CLI]
         Web[Tailwind Web UI]
     end
 
-    subgraph API [Backend Layer]
+    subgraph App [Application Layer]
         FastAPI[FastAPI Server]
+        Scripts[Ingest Scripts]
     end
 
     subgraph Core [Deep Modules]
@@ -25,23 +26,19 @@ graph TD
         DB[Database - Relational Store]
     end
 
-    subgraph External [Local Files]
-        CSV[Bank CSVs]
-        PDF[Tax PDFs]
-    end
+    %% Interactions
+    CLI -->|Calls| FastAPI
+    Web -->|Calls| FastAPI
+    
+    FastAPI -->|Uses| Assistant
+    FastAPI -->|Uses| DB
+    
+    Assistant -->|Queries| KB
+    
+    Scripts -->|Populates| KB
+    Scripts -->|Populates| DB
 
-    CLI --> FastAPI
-    Web --> FastAPI
-    
-    FastAPI --> Assistant
-    FastAPI --> KB
-    FastAPI --> DB
-    
-    Assistant -->|Dependency Injection| KB
-    KB -->|Vector Ops| DB
-    
-    CSV -->|Ingest| DB
-    PDF -->|Ingest| KB
+    KB -->|Persists to| DB
 ```
 
 ### Key Modules
