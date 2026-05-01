@@ -44,7 +44,7 @@ This application is designed for individuals who want the power of AI-driven fin
    # List transactions
    uv run python cli.py list
    # Import a CSV
-   uv run python cli.py import-csv test_data/sample.csv
+   uv run python cli.py import-csv data/bank_statements/sample.csv
    ```
 3. **Open the Web UI**:
    Open `frontend/index.html` in your favorite web browser.
